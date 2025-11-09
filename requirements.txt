@@ -1,0 +1,10 @@
+feedparser
+requests
+python-dotenv
+pydantic
+SQLAlchemy
+APScheduler
+beautifulsoup4
+# Optional for semantic matching later:
+# sentence-transformers
+# scikit-learn
