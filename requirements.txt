@@ -5,6 +5,7 @@ pydantic
 SQLAlchemy
 APScheduler
 beautifulsoup4
+PyYAML
 # Optional for semantic matching later:
 # sentence-transformers
 # scikit-learn
