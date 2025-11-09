@@ -35,6 +35,7 @@ sources:
     category: "sales,marketing,product,software-dev,customer-support"
 
 notify:
+  enabled: false
   slack_webhook: "${SLACK_WEBHOOK_URL}"
   email:
     enable: false
