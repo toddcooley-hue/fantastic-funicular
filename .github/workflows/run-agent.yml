@@ -23,14 +23,21 @@ jobs:
       - name: Run agent
         run: python -m job_agent.main
 
-      # helpful debug: see what files exist
+# Debug: show where we are and what files exist
       - name: List workspace
-        run: ls -R
+        run: |
+          echo "CWD:"
+          pwd
+          echo "Root listing:"
+          ls -la
+          echo "Outputs listing:"
+          ls -la outputs || true
 
       - name: Upload results
         uses: actions/upload-artifact@v4
         with:
           name: new-jobs
-          path: outputs/new_jobs.csv
-          if-no-files-found: error   # or 'warn' if you prefer
+          path: ${{ github.workspace }}/outputs/new_jobs.csv
+          if-no-files-found: error
+
 
