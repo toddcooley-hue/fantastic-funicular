@@ -1,9 +1,9 @@
 name: Run Job Agent
 
 on:
-  workflow_dispatch:    # lets you click “Run workflow” manually
+  workflow_dispatch:        # manual trigger
   schedule:
-    - cron: "0 13 * * *"  # runs daily at 8 AM ET (13:00 UTC)
+    - cron: "0 13 * * *"    # daily 8 AM ET (13:00 UTC)
 
 jobs:
   run:
@@ -23,15 +23,14 @@ jobs:
       - name: Run agent
         run: python -m job_agent.main
 
-# Debug: show where we are and what files exist
-      - name: List workspace
+      - name: List workspace and outputs (debug)
         run: |
-          echo "CWD:"
+          echo "Current working directory:"
           pwd
           echo "Root listing:"
           ls -la
           echo "Outputs listing:"
-          ls -la outputs || true
+          ls -la outputs || echo "No outputs folder"
 
       - name: Upload results
         uses: actions/upload-artifact@v4
