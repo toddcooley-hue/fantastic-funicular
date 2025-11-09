@@ -2,14 +2,14 @@
 import hashlib, yaml, os
 from datetime import datetime
 from dotenv import load_dotenv
-from sqlalchemy import select, update
+from sqlalchemy import select
 from job_agent.models import get_session, Job
 from job_agent.sources.rss import RSSSource
 from job_agent.sources.remotive import RemotiveSource
 from job_agent.matcher import passes_filters, score
-from job_agent.notifier import notify_slack, notify_email
 
-def make_hash(*parts): return hashlib.sha1("||".join(parts).encode()).hexdigest()
+def make_hash(*parts): 
+    return hashlib.sha1("||".join(parts).encode()).hexdigest()
 
 def make_source(s):
     if s["type"] == "rss":
@@ -20,7 +20,9 @@ def make_source(s):
 
 def run_once(config_path="config.yaml", db="sqlite:///jobs.db"):
     load_dotenv()
-    cfg = yaml.safe_load(open(config_path, "r", encoding="utf-8"))
+    with open(config_path, "r", encoding="utf-8") as f:
+        cfg = yaml.safe_load(f)
+
     session = get_session(db)
 
     # 1) pull from all sources
@@ -28,7 +30,7 @@ def run_once(config_path="config.yaml", db="sqlite:///jobs.db"):
     for s in cfg["sources"]:
         src = make_source(s)
         for j in src.fetch():
-            ext_id = j["external_id"] or make_hash(j.get("url",""), j.get("title",""))
+            ext_id = j.get("external_id") or make_hash(j.get("url",""), j.get("title",""))
             raw_jobs.append({**j, "source": s.get("name","unknown"), "external_id": ext_id})
 
     # 2) upsert + dedupe
@@ -42,11 +44,14 @@ def run_once(config_path="config.yaml", db="sqlite:///jobs.db"):
             session.add(row)
             new_or_updated.append(j)
         else:
-            # keep earliest seen; update fresh fields
-            exists.title = j["title"]; exists.company = j["company"]
-            exists.location = j["location"]; exists.url = j["url"]
-            exists.description = j["description"]; exists.published_at = j["published_at"]
-            exists.salary = j["salary"]; exists.raw = j["raw"]
+            exists.title = j["title"]
+            exists.company = j.get("company","")
+            exists.location = j.get("location","")
+            exists.url = j.get("url","")
+            exists.description = j.get("description","")
+            exists.published_at = j.get("published_at")
+            exists.salary = j.get("salary")
+            exists.raw = j.get("raw","")
             new_or_updated.append(j)
     session.commit()
 
@@ -56,7 +61,7 @@ def run_once(config_path="config.yaml", db="sqlite:///jobs.db"):
         c["_score"] = score(c, cfg)
     candidates.sort(key=lambda x: x["_score"], reverse=True)
 
-    # 4) select only those not notified yet
+    # 4) select only those not notified yet (we still mark them so we don't repeat)
     to_notify = []
     for c in candidates:
         row = session.execute(
@@ -67,13 +72,25 @@ def run_once(config_path="config.yaml", db="sqlite:///jobs.db"):
             row.notified = True
     session.commit()
 
-# Instead of notifying:
-if to_notify:
-    # notify_slack(...)
-    # notify_email(...)
-    print(f"{len(to_notify)} new matches found:")
-    for j in to_notify:
-        print(f"- {j['title']} ({j.get('company','')}) → {j['url']}")
+    # 5) output results instead of notifying
+    if to_notify:
+        print(f"\n✅ {len(to_notify)} new matches found:\n")
+        for j in to_notify:
+            print(f"- {j['title']} — {j.get('company','')} ({j.get('location','')})")
+            print(f"  {j['url']}\n")
+
+        # optional CSV output
+        try:
+            import pandas as pd
+            pd.DataFrame(to_notify).to_csv("new_jobs.csv", index=False)
+            print("Saved new_jobs.csv")
+        except Exception as e:
+            print(f"CSV write skipped ({e})")
+    else:
+        print("No new matches found.")
+
+    return {"new": len(new_or_updated), "notified": len(to_notify)}
+
   
     # Optional: save to CSV for later reference
     import pandas as pd
