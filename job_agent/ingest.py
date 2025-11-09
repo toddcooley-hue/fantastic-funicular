@@ -79,6 +79,26 @@ def run_once(config_path="config.yaml", db="sqlite:///jobs.db"):
             print(f"- {j['title']} — {j.get('company','')} ({j.get('location','')})")
             print(f"  {j['url']}\n")
 
+        import os
+from datetime import datetime
+
+# ... after you build `to_notify` and before return:
+
+# ensure output dir
+out_dir = os.path.join(os.getcwd(), "outputs")
+os.makedirs(out_dir, exist_ok=True)
+
+# always write a CSV (even if empty) so Actions can upload it
+try:
+    import pandas as pd
+    df = pd.DataFrame(to_notify)
+    out_path = os.path.join(out_dir, "new_jobs.csv")   # fixed name for Actions
+    df.to_csv(out_path, index=False)
+    print(f"Saved {out_path} ({len(df)} rows)")
+except Exception as e:
+    print(f"CSV write skipped ({e})")
+
+
         # optional CSV output
         try:
             import pandas as pd
