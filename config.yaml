@@ -30,9 +30,9 @@ sources:
   - type: rss
     name: remoteok
     url: "https://remoteok.com/remote-management-jobs.rss"
-  - type: api
-    name: remotive
-    category: "sales,marketing,product,software-dev,customer-support"
+#  - type: api
+  #  name: remotive
+  #  category: "sales,marketing,product,software-dev,customer-support"
 
 notify:
   enabled: false
