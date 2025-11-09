@@ -67,9 +67,16 @@ def run_once(config_path="config.yaml", db="sqlite:///jobs.db"):
             row.notified = True
     session.commit()
 
-    # 5) notify
-    if to_notify:
-        notify_slack(os.getenv("SLACK_WEBHOOK_URL") or cfg["notify"].get("slack_webhook"), to_notify)
-        notify_email(cfg, to_notify)
-
-    return {"new": len(new_or_updated), "notified": len(to_notify)}
+# Instead of notifying:
+if to_notify:
+    # notify_slack(...)
+    # notify_email(...)
+    print(f"{len(to_notify)} new matches found:")
+    for j in to_notify:
+        print(f"- {j['title']} ({j.get('company','')}) → {j['url']}")
+  
+    # Optional: save to CSV for later reference
+    import pandas as pd
+    pd.DataFrame(to_notify).to_csv("new_jobs.csv", index=False)
+else:
+    print("No new matches found.")
