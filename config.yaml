@@ -1,0 +1,48 @@
+# config.yaml
+filters:
+  include_keywords:
+    - "Director"
+    - "CRM"
+    - "Enrollment"
+    - "Marketing Operations"
+    - "Product Manager"
+  exclude_keywords:
+    - "Unpaid"
+    - "Intern"
+    - "Commission"
+  locations:
+    - "Massachusetts"
+    - "Vermont"
+    - "Maine"
+    - "Remote"
+salary_min: 80000
+staleness_days: 10
+semantic_match:
+  enabled: false       # turn on later if you want embeddings
+  user_profile: >
+    Director-level enrollment strategy and systems, data storytelling,
+    CRM/MarTech leadership, product-oriented ops in higher ed/edtech.
+
+sources:
+  - type: rss
+    name: weworkremotely
+    url: "https://weworkremotely.com/categories/management-and-finance/jobs.rss"
+  - type: rss
+    name: remoteok
+    url: "https://remoteok.com/remote-management-jobs.rss"
+  - type: api
+    name: remotive
+    category: "sales,marketing,product,software-dev,customer-support"
+
+notify:
+  slack_webhook: "${SLACK_WEBHOOK_URL}"
+  email:
+    enable: false
+    smtp_host: "smtp.gmail.com"
+    smtp_port: 587
+    username: "${SMTP_USER}"
+    password: "${SMTP_PASS}"
+    to: "todd@example.com"
+
+scheduler:
+  cron: "0 8 * * *"      # 8:00 AM daily
