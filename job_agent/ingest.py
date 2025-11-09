@@ -89,14 +89,22 @@ def run_once(config_path="config.yaml", db="sqlite:///jobs.db"):
     # 6) always write CSV to outputs/
     out_dir = os.path.join(os.getcwd(), "outputs")
     os.makedirs(out_dir, exist_ok=True)
+    out_path = os.path.abspath(os.path.join(out_dir, "new_jobs.csv"))
+
+    # write with pandas if available; fallback to csv module
     try:
         import pandas as pd
-        out_path = os.path.join(out_dir, "new_jobs.csv")
         pd.DataFrame(to_notify).to_csv(out_path, index=False)
-        print(f"Saved {out_path} ({len(to_notify)} rows)")
+        print(f"[write] Saved CSV via pandas → {out_path} ({len(to_notify)} rows)")
     except Exception as e:
-        print(f"CSV write skipped ({e})")
+        print(f"[write] pandas failed ({e}); falling back to csv module")
+        import csv
+        fieldnames = sorted({k for j in to_notify for k in j.keys()}) if to_notify else []
+        with open(out_path, "w", newline="", encoding="utf-8") as f:
+            w = csv.DictWriter(f, fieldnames=fieldnames)
+            if fieldnames: w.writeheader()
+            for row in to_notify: w.writerow(row)
+        print(f"[write] Saved CSV via csv module → {out_path} ({len(to_notify)} rows)")
 
-    return {"new": len(new_or_updated), "notified": len(to_notify)}
 
 
