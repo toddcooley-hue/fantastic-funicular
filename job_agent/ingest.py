@@ -91,9 +91,3 @@ def run_once(config_path="config.yaml", db="sqlite:///jobs.db"):
 
     return {"new": len(new_or_updated), "notified": len(to_notify)}
 
-  
-    # Optional: save to CSV for later reference
-    import pandas as pd
-    pd.DataFrame(to_notify).to_csv("new_jobs.csv", index=False)
-else:
-    print("No new matches found.")
