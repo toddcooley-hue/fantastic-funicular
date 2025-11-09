@@ -1,0 +1,29 @@
+name: Run Job Agent
+
+on:
+  workflow_dispatch:    # lets you click “Run workflow” manually
+  schedule:
+    - cron: "0 13 * * *"  # runs daily at 8 AM ET (13:00 UTC)
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run agent
+        run: python -m job_agent.main
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: new-jobs
+          path: new_jobs.csv
