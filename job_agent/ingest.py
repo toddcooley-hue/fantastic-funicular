@@ -106,5 +106,8 @@ def run_once(config_path="config.yaml", db="sqlite:///jobs.db"):
             for row in to_notify: w.writerow(row)
         print(f"[write] Saved CSV via csv module → {out_path} ({len(to_notify)} rows)")
 
+    return {"new": len(new_or_updated), "notified": len(to_notify)}
+
+
 
 
