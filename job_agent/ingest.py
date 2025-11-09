@@ -1,4 +1,5 @@
 # job_agent/ingest.py
+
 import hashlib, yaml, os
 from datetime import datetime
 from dotenv import load_dotenv
@@ -29,7 +30,12 @@ def run_once(config_path="config.yaml", db="sqlite:///jobs.db"):
     raw_jobs = []
     for s in cfg["sources"]:
         src = make_source(s)
-        for j in src.fetch():
+        try:
+            jobs = src.fetch()
+        except Exception as e:
+            print(f"[source:{s.get('name','unknown')}] error: {e} (skipping)")
+            jobs = []
+        for j in jobs:
             ext_id = j.get("external_id") or make_hash(j.get("url",""), j.get("title",""))
             raw_jobs.append({**j, "source": s.get("name","unknown"), "external_id": ext_id})
 
@@ -37,21 +43,20 @@ def run_once(config_path="config.yaml", db="sqlite:///jobs.db"):
     new_or_updated = []
     for j in raw_jobs:
         exists = session.execute(
-            select(Job).where(Job.source==j["source"], Job.external_id==j["external_id"])
+            select(Job).where(Job.source == j["source"], Job.external_id == j["external_id"])
         ).scalar_one_or_none()
         if not exists:
-            row = Job(**j)
-            session.add(row)
+            session.add(Job(**j))
             new_or_updated.append(j)
         else:
-            exists.title = j["title"]
-            exists.company = j.get("company","")
-            exists.location = j.get("location","")
-            exists.url = j.get("url","")
-            exists.description = j.get("description","")
+            exists.title = j.get("title", "")
+            exists.company = j.get("company", "")
+            exists.location = j.get("location", "")
+            exists.url = j.get("url", "")
+            exists.description = j.get("description", "")
             exists.published_at = j.get("published_at")
             exists.salary = j.get("salary")
-            exists.raw = j.get("raw","")
+            exists.raw = j.get("raw", "")
             new_or_updated.append(j)
     session.commit()
 
@@ -61,53 +66,37 @@ def run_once(config_path="config.yaml", db="sqlite:///jobs.db"):
         c["_score"] = score(c, cfg)
     candidates.sort(key=lambda x: x["_score"], reverse=True)
 
-    # 4) select only those not notified yet (we still mark them so we don't repeat)
+    # 4) select only those not notified yet (mark so we don't repeat)
     to_notify = []
     for c in candidates:
         row = session.execute(
-            select(Job).where(Job.source==c["source"], Job.external_id==c["external_id"])
+            select(Job).where(Job.source == c["source"], Job.external_id == c["external_id"])
         ).scalar_one()
         if not row.notified:
             to_notify.append(c)
             row.notified = True
     session.commit()
 
-    # 5) output results instead of notifying
+    # 5) console output
     if to_notify:
         print(f"\n✅ {len(to_notify)} new matches found:\n")
         for j in to_notify:
             print(f"- {j['title']} — {j.get('company','')} ({j.get('location','')})")
             print(f"  {j['url']}\n")
-
-        import os
-from datetime import datetime
-
-# ... after you build `to_notify` and before return:
-
-# ensure output dir
-out_dir = os.path.join(os.getcwd(), "outputs")
-os.makedirs(out_dir, exist_ok=True)
-
-# always write a CSV (even if empty) so Actions can upload it
-try:
-    import pandas as pd
-    df = pd.DataFrame(to_notify)
-    out_path = os.path.join(out_dir, "new_jobs.csv")   # fixed name for Actions
-    df.to_csv(out_path, index=False)
-    print(f"Saved {out_path} ({len(df)} rows)")
-except Exception as e:
-    print(f"CSV write skipped ({e})")
-
-
-        # optional CSV output
-        try:
-            import pandas as pd
-            pd.DataFrame(to_notify).to_csv("new_jobs.csv", index=False)
-            print("Saved new_jobs.csv")
-        except Exception as e:
-            print(f"CSV write skipped ({e})")
     else:
         print("No new matches found.")
 
+    # 6) always write CSV to outputs/
+    out_dir = os.path.join(os.getcwd(), "outputs")
+    os.makedirs(out_dir, exist_ok=True)
+    try:
+        import pandas as pd
+        out_path = os.path.join(out_dir, "new_jobs.csv")
+        pd.DataFrame(to_notify).to_csv(out_path, index=False)
+        print(f"Saved {out_path} ({len(to_notify)} rows)")
+    except Exception as e:
+        print(f"CSV write skipped ({e})")
+
     return {"new": len(new_or_updated), "notified": len(to_notify)}
+
 
