@@ -22,8 +22,15 @@ jobs:
 
       - name: Run agent
         run: python -m job_agent.main
+
+      # helpful debug: see what files exist
+      - name: List workspace
+        run: ls -R
+
       - name: Upload results
         uses: actions/upload-artifact@v4
         with:
           name: new-jobs
-          path: new_jobs.csv
+          path: outputs/new_jobs.csv
+          if-no-files-found: error   # or 'warn' if you prefer
+
